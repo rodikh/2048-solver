@@ -8,6 +8,6 @@
 
     window.solver = new Solver(game);
 
-    window.solver.solve();
+    //window.solver.solve();
 
 } (window, window.Solver));
