@@ -10,6 +10,8 @@
     var Game = function () {
         this.sizeX = 4;
         this.sizeY = 4;
+        this.gameover = false;
+        this.win = false;
         this.reset();
 
         this.bindKeyboard();
@@ -61,15 +63,26 @@
 
     };
 
-    Game.prototype.swipe = function (direction) {
-        var moved = this['swipe' + direction.charAt(0).toUpperCase() + direction.slice(1)](this.board);
-        this.upgradeTiles();
+    Game.prototype.swipe = function (direction, board) {
+        if (this.gameover) {
+            return;
+        }
+        if (!board) {
+            board = this.board;
+        }
+        var moved = this['swipe' + direction.charAt(0).toUpperCase() + direction.slice(1)](board);
+        this.upgradeTiles(board);
         if (!moved) {
             return;
         }
 
-        if (this.spawnTile() === false) {
-            console.log('Can\'t Spawn');
+        this.spawnTile(board);
+        if (this.getEmptyTiles(board) === false) {
+            if (!this.getAvailableMoves(board)) {
+                if (board === this.board) {
+                    this.gameover = true;
+                }
+            }
         }
         this.print();
     };
@@ -80,20 +93,20 @@
         this.iterateSlide('up', function (i, j, k) {
             if (board[k][j] !== EMPTY_TILE) {
                 if (board[k][j] === board[i][j]) {
-                    self.moveTile(k, j, i, j);
+                    self.moveTile(k, j, i, j, board);
                     moved = true;
                 } else {
                     if (k !== i - 1) {
-                        self.moveTile(k + 1, j, i, j);
+                        self.moveTile(k + 1, j, i, j, board);
                         moved = true;
                     }
                 }
                 return BREAK;
             } else if (k === 0) {
-                self.moveTile(k, j, i, j);
+                self.moveTile(k, j, i, j, board);
                 moved = true;
             }
-        });
+        }, board);
 
         return moved;
     };
@@ -104,20 +117,20 @@
         this.iterateSlide('down', function (i, j, k) {
             if (board[k][j] !== EMPTY_TILE) {
                 if (board[k][j] === board[i][j]) {
-                    self.moveTile(k, j, i, j);
+                    self.moveTile(k, j, i, j, board);
                     moved = true;
                 } else {
                     if (k !== i + 1) {
-                        self.moveTile(k - 1, j, i, j);
+                        self.moveTile(k - 1, j, i, j, board);
                         moved = true;
                     }
                 }
                 return BREAK;
             } else if (k === board.length - 1) {
-                self.moveTile(k, j, i, j);
+                self.moveTile(k, j, i, j, board);
                 moved = true;
             }
-        });
+        }, board);
         return moved;
     };
 
@@ -127,20 +140,20 @@
         this.iterateSlide('left', function (i, j, k) {
             if (board[i][k] !== EMPTY_TILE) {
                 if (board[i][k] === board[i][j]) {
-                    self.moveTile(i, k, i, j);
+                    self.moveTile(i, k, i, j, board);
                     moved = true;
                 } else {
                     if (k !== j - 1) {
-                        self.moveTile(i, k + 1, i, j);
+                        self.moveTile(i, k + 1, i, j, board);
                         moved = true;
                     }
                 }
                 return BREAK;
             } else if (k === 0) {
-                self.moveTile(i, k, i, j);
+                self.moveTile(i, k, i, j, board);
                 moved = true;
             }
-        });
+        }, board);
 
         return moved;
     };
@@ -151,34 +164,68 @@
         this.iterateSlide('right', function (i, j, k) {
             if (board[i][k] !== EMPTY_TILE) {
                 if (board[i][k] === board[i][j]) {
-                    self.moveTile(i, k, i, j);
+                    self.moveTile(i, k, i, j, board);
                     moved = true;
                 } else {
                     if (k !== j + 1) {
-                        self.moveTile(i, k - 1, i, j);
+                        self.moveTile(i, k - 1, i, j, board);
                         moved = true;
                     }
                 }
                 return BREAK;
             } else if (k === board[i].length - 1) {
-                self.moveTile(i, k, i, j);
+                self.moveTile(i, k, i, j, board);
                 moved = true;
             }
-        });
+        }, board);
 
         return moved;
     };
 
-    Game.prototype.spawnTile = function () {
+    Game.prototype.getEmptyTiles = function (board) {
+        if (!board) {
+            board = this.board;
+        }
         var randOpts = [];
-        for (var i = 0; i < this.board.length; i++) {
-            for (var j = 0; j < this.board[i].length; j++) {
-                if (this.board[i][j] === EMPTY_TILE) {
+        for (var i = 0; i < board.length; i++) {
+            for (var j = 0; j < board[i].length; j++) {
+                if (board[i][j] === EMPTY_TILE) {
                     randOpts.push([i, j]);
                 }
             }
         }
-        if (randOpts.length === 0) {
+        return randOpts.length ? randOpts : false;
+    };
+
+    Game.prototype.getAvailableMoves = function (board) {
+        var moves = [];
+        var boardCopy = this.getBoardClone(board);
+        if (this.swipeLeft(boardCopy)) {
+            moves.push(this.swipe.bind(this, 'left'));
+            moves[moves.length-1].fnName = 'left';
+        }
+        if (this.swipeDown(boardCopy)) {
+            moves.push(this.swipe.bind(this, 'down'));
+            moves[moves.length-1].fnName = 'down';
+        }
+        if (this.swipeUp(boardCopy)) {
+            moves.push(this.swipe.bind(this, 'up'));
+            moves[moves.length-1].fnName = 'up';
+        }
+        if (this.swipeRight(boardCopy)) {
+            moves.push(this.swipe.bind(this, 'right'));
+            moves[moves.length-1].fnName = 'right';
+        }
+
+        return moves.length? moves : false;
+    };
+
+    Game.prototype.spawnTile = function (board) {
+        if (!board) {
+            board = this.board;
+        }
+        var randOpts = this.getEmptyTiles(board);
+        if (randOpts === false) {
             return false;
         }
         var randIndex = Math.floor(Math.random() * randOpts.length);
@@ -187,7 +234,7 @@
 
         var tileValue = Math.random() < 0.9 ? 2 : 4;
 
-        this.board[xy[0]][xy[1]] = tileValue;
+        board[xy[0]][xy[1]] = tileValue;
     };
 
     Game.prototype.print = function () {
@@ -197,8 +244,20 @@
                 el.innerText = this.board[i][j];
                 el.setAttribute('data-value', this.board[i][j]);
             }
-            console.log(this.board[i]);
+            //console.log(this.board[i]);
         }
+    };
+
+    Game.prototype.getBoardClone = function (board) {
+        if (!board) {
+            board = this.board;
+        }
+
+        var clone = [];
+        for (var i = 0; i < board.length; i++) {
+            clone.push(board[i].slice())
+        }
+        return clone;
     };
 
     Game.prototype.moveTile = function (i, j, k, p, board) {
@@ -212,6 +271,7 @@
         }
         board[k][p] = EMPTY_TILE;
 
+        return true;
     };
 
     Game.prototype.upgradeTiles = function (board) {
@@ -223,6 +283,12 @@
             for (var j = 0; j < board.length; j++) {
                 if (board[i][j] % 2 === 1) {
                     board[i][j] = (board[i][j] - 1) * 2;
+                    if (board[i][j] === 2048) {
+                        if (board === this.board){
+                            this.gameover = true;
+                            this.win = true;
+                        }
+                    }
                 }
             }
         }
