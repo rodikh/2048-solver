@@ -35,7 +35,7 @@
 
     };
 
-    var maxIter = 4;
+    var maxIter = 3;
 
     Solver.prototype.isGoodMove = function (board, iter) {
         if (iter === maxIter) {
@@ -47,7 +47,7 @@
         for (var i in moves) {
             var cloneBoard = this.game.getBoardClone(board);
             moves[i](cloneBoard);
-            sumScore += this.isGoodMove(cloneBoard, iter + 1) + score(board);
+            sumScore += this.isGoodMove(cloneBoard, iter + 1);// + score(board);
         }
         return sumScore;
     };
