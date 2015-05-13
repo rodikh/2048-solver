@@ -1,0 +1,24 @@
+@import "compass";
+
+.game-container {
+  width: 400px;
+  height: 400px;
+
+  font-size: 30px;
+
+  #game td {
+    height: 100px;
+    width: 100px;
+    vertical-align: middle;
+    text-align: center;
+
+    @for $i from 1 to 12 {
+      $exp: "'" + pow(2, $i) + "'";
+
+      $color: hsl($i / 12 * 360, 100%, 50%);
+      &[data-value=#{$exp}] {
+        background: $color;
+      }
+    }
+  }
+}

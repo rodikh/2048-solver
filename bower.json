@@ -1,0 +1,8 @@
+{
+  "name": "2048-solver",
+  "version": "0.0.1",
+  "dependencies": {
+    "dat-gui": "0.5.1",
+    "bootstrap": "*"
+  }
+}

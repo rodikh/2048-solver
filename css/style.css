@@ -1,0 +1,57 @@
+/* line 3, style.scss */
+.game-container {
+  width: 400px;
+  height: 400px;
+  font-size: 30px;
+}
+/* line 9, style.scss */
+.game-container #game td {
+  height: 100px;
+  width: 100px;
+  vertical-align: middle;
+  text-align: center;
+}
+/* line 19, style.scss */
+.game-container #game td[data-value='2'] {
+  background: #ff8000;
+}
+/* line 19, style.scss */
+.game-container #game td[data-value='4'] {
+  background: yellow;
+}
+/* line 19, style.scss */
+.game-container #game td[data-value='8'] {
+  background: #80ff00;
+}
+/* line 19, style.scss */
+.game-container #game td[data-value='16'] {
+  background: lime;
+}
+/* line 19, style.scss */
+.game-container #game td[data-value='32'] {
+  background: #00ff80;
+}
+/* line 19, style.scss */
+.game-container #game td[data-value='64'] {
+  background: cyan;
+}
+/* line 19, style.scss */
+.game-container #game td[data-value='128'] {
+  background: #007fff;
+}
+/* line 19, style.scss */
+.game-container #game td[data-value='256'] {
+  background: blue;
+}
+/* line 19, style.scss */
+.game-container #game td[data-value='512'] {
+  background: #7f00ff;
+}
+/* line 19, style.scss */
+.game-container #game td[data-value='1024'] {
+  background: magenta;
+}
+/* line 19, style.scss */
+.game-container #game td[data-value='2048'] {
+  background: #ff0080;
+}
