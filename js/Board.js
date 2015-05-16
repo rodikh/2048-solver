@@ -30,34 +30,53 @@
         this.spawnTile();
     };
 
-    Board.prototype.move = function (direction) {
+    Board.prototype.move = function (direction, dryRun) {
         var reverse = (direction === 'down' || direction === 'right');
         var vertical = (direction === 'up' || direction === 'down');
 
         var moved = false;
 
-        this.each(function (i,j,value) {
+        var result = this.each(function (i,j,value) {
             if (value !== EMPTY_TILE) {
-                this.iterateBack(vertical, reverse, i, j, function (k,l,runner,start,end,previous) {
+                var result = this.iterateBack(vertical, reverse, i, j, function (k,l,runner,start,end,previous) {
                     if (this.board[k][l] !== EMPTY_TILE) {
                         if (value === this.board[k][l]) {
+                            if (dryRun) {
+                                return true;
+                            }
                             this.moveTile(i, j, k, l);
                             moved = true;
                         } else {
                             if (runner !== start) {
-                                self.moveTile(i, j, previous[0], previous[1]);
+                                if (dryRun) {
+                                    return true;
+                                }
+                                this.moveTile(i, j, previous[0], previous[1]);
                                 moved = true;
                             }
                         }
                         return BREAK;
                     } else if (runner === end) {
+                        if (dryRun) {
+                            return true;
+                        }
                         this.moveTile(i, j, k, l);
                         moved = true;
                     }
                 });
+
+                if (result === true) {
+                    return true;
+                }
             }
         }, reverse);
 
+        if (result === true) {
+            return true;
+        }
+        if (!moved) {
+            return false;
+        }
         this.upgradeTiles();
         this.spawnTile();
 
@@ -68,7 +87,7 @@
         if (this.board[x1][y1] === this.board[x2][y2]) {
             this.setTile(x2,y2, this.board[x2][y2] * -2);
         } else {
-            this.setTile(x2,y2,this.board[x1][x2]);
+            this.setTile(x2,y2,this.board[x1][y1]);
         }
         this.setTile(x1,y1,EMPTY_TILE);
 
@@ -84,48 +103,45 @@
 
     Board.prototype.iterateBack = function (vertical, reverse, i, j, cb) {
         var k,
-            op = (reverse) ? '>=' : '<=',
+            op = (reverse) ?  '<=' : '>=',
             end = (reverse) ? this.size - 1 : 0,
-            start = (vertical) ? j : i,
-            inc = (reverse) ? -1 : 1;
+            start = (vertical) ? i : j,
+            inc = (reverse) ? 1 : -1,
+            result;
 
         if (reverse) {
-            start--;
-        } else {
             start++;
+        } else {
+            start--;
         }
 
         for (k = start; compare(k,op,end); k = k + inc) {
             if (vertical) {
-                if (cb.call(this,k,j,k,start,end, [k-inc,j]) === BREAK) {
+                result = cb.call(this,k,j,k,start,end, [k-inc,j]);
+                if (result === BREAK) {
                     break;
+                } else if (result === true) {
+                    return true;
                 }
             } else {
-                if (cb.call(this,i,k,k,start,end, [i,k-inc]) === BREAK) {
+                result = cb.call(this,i,k,k,start,end, [i,k-inc])
+                if (result === BREAK) {
                     break;
+                } else if (result === true) {
+                    return true;
                 }
             }
         }
     };
 
     Board.prototype.getAvailableMoves = function () {
-        var moves = [];
-        var boardCopy = this.clone();
-        if (boardCopy.move('left')) {
-            moves.push(this.move.bind(this, 'left'));
-            moves[moves.length - 1].fnName = 'left';
-        }
-        if (boardCopy.move('down')) {
-            moves.push(this.move.bind(this, 'down'));
-            moves[moves.length - 1].fnName = 'down';
-        }
-        if (boardCopy.move('up')) {
-            moves.push(this.move.bind(this, 'up`'));
-            moves[moves.length - 1].fnName = 'up';
-        }
-        if (boardCopy.move('right')) {
-            moves.push(this.move.bind(this, 'right'));
-            moves[moves.length - 1].fnName = 'right';
+        var moves = [],
+            i,
+            directions = ['left', 'down', 'up', 'right'];
+        for (i = 0; i < directions.length; i++) {
+            if (this.move(directions[i], 1)) {
+                moves.push({fn:this.move, args: [directions[i]]});
+            }
         }
 
         return moves.length ? moves : false;
@@ -146,16 +162,23 @@
     };
 
     Board.prototype.each = function (cb, reverse) {
-        var i, j, size = this.size;
+        var i, j, size = this.size,
+            result;
         for (i = 0; i < size; i++) {
             for (j = 0; j < size; j++) {
                 if (reverse) {  // right,down
-                    if (cb.call(this, size - 1 - i, size - 1 - j, this.board[i][j]) === STOP) {
+                    result = cb.call(this, size - 1 - i, size - 1 - j, this.board[size - 1 - i][size - 1 - j]);
+                    if (result === STOP) {
                         return;
+                    } else if (result === true) {
+                        return true;
                     }
                 } else {        // left,up
-                    if (cb.call(this, i, j, this.board[i][j]) === STOP) {
+                    result = cb.call(this, i, j, this.board[i][j])
+                    if (result === STOP) {
                         return;
+                    } else if (result === true) {
+                        return true;
                     }
                 }
             }
@@ -206,6 +229,7 @@
         for (var i = 0; i < this.size; i++) {
             clone.board[i] = this.board[i].slice();
         }
+        clone.map();
         return clone;
     };
 

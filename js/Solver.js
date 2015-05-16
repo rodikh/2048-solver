@@ -12,7 +12,7 @@
         }
 
         this.settings = {
-            maxIter: options.maxIter || 5
+            maxIter: options.maxIter || 6
         };
         this.game = game;
         this.moveHistory = [];
@@ -21,31 +21,43 @@
     Solver.prototype.solve = function () {
         var self = this;
         this.interval = setInterval(function () {
-            if (self.game.gameover) {
-                clearInterval(self.interval);
-                return;
+            self.solveOne();
+            //document.querySelector('.fps').innerText = 30 * 1000 / timer;
+            //timer = performance.now() - timer;
+        }, 50);
+
+    };
+
+    Solver.prototype.solveOne = function (verbose) {
+        var moves = this.game.board.getAvailableMoves();
+        if (this.game.gameover || !moves) {
+            clearInterval(this.interval);
+            return;
+        }
+
+        var maxScore = 0,
+            bestMove = moves[0];
+        for (var i = 0; i < moves.length; i++) {
+            var cloneBoard = this.game.board.clone();
+            moves[i].fn.apply(cloneBoard, moves[i].args);
+            moves[i].score = this.isGoodMove(cloneBoard, this.settings.maxIter);
+            if (moves[i].score > maxScore) {
+                maxScore = moves[i].score;
+                bestMove = moves[i];
             }
+        }
 
-            var moves = game.getAvailableMoves(self.game.board);
-            var maxScore = 0,
-                bestMove = moves[0];
-            for (var i = 0; i < moves.length; i++) {
-                var cloneBoard = self.game.getBoardClone(self.game.board);
-                moves[i](cloneBoard);
-                var score = self.isGoodMove(cloneBoard, self.settings.maxIter);
-                if (score > maxScore) {
-                    maxScore = score;
-                    bestMove = moves[i];
-                }
-            }
+        bestMove.fn.apply(this.game.board, bestMove.args);
+        this.game.print();
+        this.moveHistory.push(bestMove);
+    };
 
-            bestMove();
-            self.moveHistory.push([bestMove.fnName, maxScore]);
-
-            document.querySelector('.fps').innerText = 30 * 1000 / timer;
-            timer = performance.now() - timer;
-        }, 0);
-
+    Solver.prototype.history = function () {
+        var history = [];
+        for (var i = this.moveHistory.length - 1; i >= 0; i--) {
+            history.push({args: JSON.stringify(this.moveHistory[i].args), score: this.moveHistory[i].score});
+        }
+        console.log(history);
     };
 
     Solver.prototype.stop = function () {
@@ -58,73 +70,59 @@
             return this.score(board);
         }
 
-        var moves = this.game.getAvailableMoves(board),
+
+        var moves = board.getAvailableMoves(),
             sumScore = 0;
-        for (var i in moves) {
-            var cloneBoard = this.game.getBoardClone(board);
-            moves[i](cloneBoard);
-            sumScore += this.isGoodMove(cloneBoard, iter - 1);// + score(board);
+        for (var i = 0; i < moves.length; i++) {
+            var cloneBoard = this.game.board.clone();
+            moves[i].fn.apply(cloneBoard, moves[i].args);
+            sumScore += this.isGoodMove(cloneBoard, iter - 1);
         }
+        sumScore += this.score(board);
         return sumScore;
     };
 
     Solver.prototype.score = function (board) {
         var sum = 0,
-            empties = 0,
-            highest = 0,
+            empties = board.empty,
+            highest = board.highest,
             bonus = 0,
             sortedness = 0;
-        var i,j;
+        var i;
 
-        for (i = 0; i < board.length; i++) {
-            for (j = 0; j < board.length; j++) {
-                if (board[i][j] === EMPTY_TILE) {
-                    empties++;
-                } else {
-                    sum += board[i][j];
-                    if (highest < board[i][j]) {
-                        highest = board[i][j];
-                    }
-                }
-            }
-        }
+        board.each(function (i,j,value) {
+            sum += value;
+        });
 
-        if (highest === board[board.length-1][0]) {
-            bonus += highest;
-        }
-
-        for (i = 0; i < board.length; i++) {
-            var row = this.game.getRow(i, board);
-            if (!i%2) {
-                row = row.reverse();
+        for (i = 0; i < board.size; i++) {
+            var row = board.rows[i];
+            if (this.isSortedArray(row,1)) {
+                sortedness+= (board.size - i) * 10;
             }
-            if (this.isSortedArray(row)) {
-                sortedness+= (board.length - i) * 5;
-            }
-            if (this.isSortedArray(board[board.length-i-1])) {
-                sortedness+= (board.length - i);
+            if (this.isSortedArray(board.board[board.size-i-1])) {
+                sortedness+= (board.size - i) * 3;
             }
         }
 
 
+        //return sortedness;
         return ~~(bonus + (sortedness * highest) + sum / (board.length*board.length - empties));
         //return highest + sum / (board.length*board.length - empties);
         //return sortedness;
         //return bonus;
-    }
+    };
 
-    function sortednessScore (board) {
-        var row = this.game.getRow(0, board).reverse();
-
-        if (this.isSortedArray(row)) {
-            return 100;
+    function compare (a, op, b) {
+        switch (op) {
+            case '>':  return a > b;
+            case '<':  return a < b;
         }
     }
 
-
-    Solver.prototype.isSortedArray = function(arr) {
+    Solver.prototype.isSortedArray = function(arr, reverse) {
+        var op = (reverse) ? '>' : '<';
         for (var i = 1; i < arr.length; i++) {
-            if (arr[i-1] < arr[i]) {
+            if (compare(arr[i-1], op, arr[i])) {
                 return false;
             }
         }

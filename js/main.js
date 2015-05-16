@@ -6,7 +6,7 @@
     var game = new Game();
     window.game = game;
 
-    //window.solver = new Solver(game);
+    window.solver = new Solver(game);
 
     //window.solver.solve();
 
