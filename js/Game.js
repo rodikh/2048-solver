@@ -3,13 +3,13 @@
 
     const EMPTY_TILE = 0;
     const BREAK = 'break';
+
     /**
      * Game manager
      * @constructor
      */
     var Game = function () {
-        this.sizeX = 4;
-        this.sizeY = 4;
+        this.size = 4;
         this.gameover = false;
         this.win = false;
         this.reset();
@@ -39,17 +39,16 @@
                     break;
             }
         }, false);
-
-    }
+    };
 
     /**
      * Reset the game data to a new game state
      */
     Game.prototype.reset = function () {
         this.board = [];
-        for (var i = 0; i < this.sizeX; i++) {
+        for (var i = 0; i < this.size; i++) {
             var row = [];
-            for (var j = 0; j < this.sizeY; j++) {
+            for (var j = 0; j < this.size; j++) {
                 row.push(EMPTY_TILE);
             }
             this.board.push(row);
@@ -77,11 +76,9 @@
         }
 
         this.spawnTile(board);
-        if (this.getEmptyTiles(board) === false) {
-            if (!this.getAvailableMoves(board)) {
-                if (board === this.board) {
-                    this.gameover = true;
-                }
+        if (!this.getAvailableMoves(board)) {
+            if (board === this.board) {
+                this.gameover = true;
             }
         }
         this.print();
@@ -126,7 +123,7 @@
                     }
                 }
                 return BREAK;
-            } else if (k === board.length - 1) {
+            } else if (k === self.size - 1) {
                 self.moveTile(k, j, i, j, board);
                 moved = true;
             }
@@ -182,19 +179,20 @@
         return moved;
     };
 
-    Game.prototype.getEmptyTiles = function (board) {
+    Game.prototype.getRandomEmptyTile = function (board) {
         if (!board) {
             board = this.board;
         }
         var randOpts = [];
-        for (var i = 0; i < board.length; i++) {
+        for (var i = 0; i < this.size; i++) {
             for (var j = 0; j < board[i].length; j++) {
                 if (board[i][j] === EMPTY_TILE) {
                     randOpts.push([i, j]);
                 }
             }
         }
-        return randOpts.length ? randOpts : false;
+
+        return randOpts.length ? randOpts[Math.floor(Math.random() * randOpts.length)] : false;
     };
 
     Game.prototype.getAvailableMoves = function (board) {
@@ -202,50 +200,46 @@
         var boardCopy = this.getBoardClone(board);
         if (this.swipeLeft(boardCopy)) {
             moves.push(this.swipe.bind(this, 'left'));
-            moves[moves.length-1].fnName = 'left';
+            moves[moves.length - 1].fnName = 'left';
         }
         if (this.swipeDown(boardCopy)) {
             moves.push(this.swipe.bind(this, 'down'));
-            moves[moves.length-1].fnName = 'down';
+            moves[moves.length - 1].fnName = 'down';
         }
         if (this.swipeUp(boardCopy)) {
             moves.push(this.swipe.bind(this, 'up'));
-            moves[moves.length-1].fnName = 'up';
+            moves[moves.length - 1].fnName = 'up';
         }
         if (this.swipeRight(boardCopy)) {
             moves.push(this.swipe.bind(this, 'right'));
-            moves[moves.length-1].fnName = 'right';
+            moves[moves.length - 1].fnName = 'right';
         }
 
-        return moves.length? moves : false;
+        return moves.length ? moves : false;
     };
 
     Game.prototype.spawnTile = function (board) {
         if (!board) {
             board = this.board;
         }
-        var randOpts = this.getEmptyTiles(board);
-        if (randOpts === false) {
+
+        var xy = this.getRandomEmptyTile(board);
+        if (!xy) {
             return false;
         }
-        var randIndex = Math.floor(Math.random() * randOpts.length);
-        var xy = randOpts[randIndex];
 
-
-        var tileValue = Math.random() < 0.9 ? 2 : 4;
-
-        board[xy[0]][xy[1]] = tileValue;
+        board[xy[0]][xy[1]] = Math.random() < 0.9 ? 2 : 4;
     };
 
     Game.prototype.print = function () {
-        for (var i = 0; i < this.board.length; i++) {
+        for (var i = 0; i < this.size; i++) {
             for (var j = 0; j < this.board[i].length; j++) {
                 var el = document.querySelector('table#game tr:nth-child(' + parseInt(i + 1) + ') td:nth-child(' + parseInt(j + 1) + ')');
                 el.innerText = this.board[i][j];
                 el.setAttribute('data-value', this.board[i][j]);
             }
-            //console.log(this.board[i]);
         }
+
     };
 
     Game.prototype.getBoardClone = function (board) {
@@ -254,10 +248,21 @@
         }
 
         var clone = [];
-        for (var i = 0; i < board.length; i++) {
+        for (var i = 0; i < this.size; i++) {
             clone.push(board[i].slice())
         }
         return clone;
+    };
+
+    Game.prototype.getRow = function (i, board) {
+        if (!board) {
+            board = this.board;
+        }
+        var row = [];
+        for (var j = 0; j < this.size; j++) {
+            row.push(board[j][i])
+        }
+        return row;
     };
 
     Game.prototype.moveTile = function (i, j, k, p, board) {
@@ -279,17 +284,26 @@
             board = this.board;
         }
 
-        for (var i = 0; i < board.length; i++) {
-            for (var j = 0; j < board.length; j++) {
+        for (var i = 0; i < this.size; i++) {
+            for (var j = 0; j < this.size; j++) {
                 if (board[i][j] % 2 === 1) {
                     board[i][j] = (board[i][j] - 1) * 2;
                     if (board[i][j] === 2048) {
-                        if (board === this.board){
+                        if (board === this.board) {
                             this.gameover = true;
                             this.win = true;
                         }
                     }
                 }
+            }
+        }
+    };
+
+    Game.prototype.each = function (cb) {
+        var i, j, max = this.size;
+        for (i = 0; i < max; i++) {
+            for (j = 0; j < max; j++) {
+                cb(i,j, value);
             }
         }
     };
@@ -300,7 +314,7 @@
         }
 
         var i, j, k;
-        var max = board.length;
+        var max = this.size;
         switch (dir) {
             case 'up':
                 for (j = 0; j < max; j++) {
